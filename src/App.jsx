@@ -51,6 +51,7 @@ Extract all dimensions and respond ONLY with valid JSON, no markdown, no preambl
 Rules:
 - total_years: calculate from actual work history dates, not self-reported summaries
 - For evidence fields: ALWAYS prefer a direct quote or paraphrase from the resume. Use single quotes not double quotes inside evidence text. Only use AI synthesis (clearly marked with 'Based on...') when no specific resume text supports the classification
+- CRITICAL for function evidence: The evidence must justify WHY this specific function level applies. Process Specialist evidence should show execution of defined processes. Process Manager evidence should show improving or designing processes. People Manager evidence should show managing direct reports. Strategic Manager/Advisor/Executive evidence should show setting direction. Do NOT use the same impressive-sounding quote for multiple functions — match the evidence to the actual scope of the work.
 - Years across industries MUST sum to total_years
 - Years across functions should reflect actual time spent at each level
 
@@ -219,12 +220,14 @@ function ExpandableRow({ label, years, evidence, accentClass }) {
 // ─── Recruiter card ───────────────────────────────────────────────────────────
 
 function RecruiterCard({ profile, framework }) {
+  const [copied, setCopied] = useState(false)
+
   const copyText = () => {
     const el = document.getElementById('recruiter-profile')
     if (el) navigator.clipboard.writeText(el.innerText).catch(() => {})
   }
 
-  const downloadPDF = () => {    const p = profile
+  const downloadHTML = () => {    const p = profile
     const fw = framework || 'O*NET'
 
     const chipStyle = (bg, color) => `display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:${bg};color:${color};margin:2px 3px 2px 0;`
@@ -329,15 +332,51 @@ function RecruiterCard({ profile, framework }) {
 </body>
 </html>`
 
-    // Use browser print dialog on the HTML string via iframe
+    // Download as HTML file
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'TinyNet_Profile.html'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadPDF = () => {
+    const p = profile
+    const fw = framework || 'O*NET'
+    // Generate same HTML then print via iframe → browser saves as PDF
+    const chipStyle = (bg, color) => `display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:${bg};color:${color};margin:2px 3px 2px 0;`
+    const renderRow = (label, years, evidence, bg, color) => `
+      <div style="border-bottom:1px solid #f0f0f0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;">
+          <span style="${chipStyle(bg, color)}">${label}</span>
+          <span style="font-size:11px;color:#999;">${years}y</span>
+        </div>
+        ${evidence ? `<div style="padding:0 16px 10px;font-size:11px;color:#777;font-style:italic;line-height:1.5;">${evidence}</div>` : ''}
+      </div>`
+    const fnRows = (p.functions || []).map(fn => {
+      const name = typeof fn === 'string' ? fn : fn.name
+      const years = typeof fn === 'object' ? fn.years : 0
+      const evidence = typeof fn === 'object' ? fn.evidence : ''
+      return renderRow(`${getSeniority(years)} ${name}`, years, evidence, '#eef0fb', '#3730a3')
+    }).join('')
+    const fieldRows = (p.fields || []).map(f => renderRow(f.name, f.years, f.evidence, '#f3f4f6', '#374151')).join('')
+    const indRows = (p.industries || []).map(ind => renderRow(ind.name, ind.years, ind.evidence, '#f0fdf9', '#0f6e56')).join('')
+    const tools = (p.tools || []).map(t => `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:#f5f5f5;color:#666;border:1px solid #e0e0e0;margin:2px 3px 2px 0;">${t}</span>`).join('')
+    const creds = (p.credentials || []).map(c => `<div style="margin-bottom:6px;font-size:12px;"><span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-right:8px;">${c.type}</span><strong>${c.name}</strong>${c.institution ? ` · ${c.institution}` : ''}${c.year ? ` · ${c.year}` : ''}</div>`).join('')
+    const section = (label, body, sub='') => `<div style="border-bottom:1px solid #eee;"><div style="padding:12px 16px 4px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;">${label}${sub ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#ccc;">${sub}</span>` : ''}</span></div>${body}</div>`
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>TinyNet Profile</title><style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',Arial,sans-serif;background:#f7f5f0;display:flex;justify-content:center;padding:40px 16px;}.card{background:white;border-radius:16px;overflow:hidden;max-width:680px;width:100%;box-shadow:0 2px 16px rgba(0,0,0,.08);}@media print{body{background:white;padding:0;}.card{box-shadow:none;border-radius:0;}}</style></head><body><div class="card"><div style="background:#1c1917;padding:24px;"><p style="color:#78716c;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">TinyNet · Taxonomy Profile</p><p style="color:#d6d3d1;font-size:13px;line-height:1.6;">${p.summary||''}</p></div>${section('Function',fnRows)}${section('Knowledge Area / Discipline',fieldRows,`(${fw})`)}${section('Industry',indRows,'(NAICS)')}${p.strengths?`<div style="border-bottom:1px solid #eee;padding:16px;background:#fafaf9;"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px;">Strengths</p><p style="font-size:13px;color:#555;line-height:1.6;">${p.strengths}</p></div>`:''}${tools?`<div style="border-bottom:1px solid #eee;padding:16px;"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px;">Tooling &amp; Methods</p>${tools}</div>`:''}${creds?`<div style="border-bottom:1px solid #eee;padding:16px;"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px;">Education &amp; Credentials</p>${creds}</div>`:''}<div style="padding:12px 16px;display:flex;justify-content:space-between;"><span style="font-size:10px;color:#ccc;">Candidate-owned · read-only for recruiters</span><span style="font-size:10px;color:#ccc;">TinyNet</span></div></div></body></html>`
     const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;'
     document.body.appendChild(iframe)
     iframe.contentDocument.write(html)
     iframe.contentDocument.close()
     iframe.contentWindow.focus()
     iframe.contentWindow.print()
-    setTimeout(() => document.body.removeChild(iframe), 1000)
+    setTimeout(() => document.body.removeChild(iframe), 2000)
   }
 
   return (
@@ -418,9 +457,23 @@ function RecruiterCard({ profile, framework }) {
         </div>
       </div>
       <div className="flex gap-3 mt-4">
-        <button onClick={copyText} className="text-xs px-3 py-1.5 border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50">Copy as text</button>
-        <button onClick={downloadPDF} className="text-xs px-3 py-1.5 border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50">
+        <button
+          onClick={() => { copyText(); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+          className="text-xs px-3 py-1.5 border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-100 hover:border-stone-300 active:scale-95 transition-all"
+        >
+          {copied ? 'Copied!' : 'Copy as text'}
+        </button>
+        <button
+          onClick={downloadHTML}
+          className="text-xs px-3 py-1.5 border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-100 hover:border-stone-300 active:scale-95 transition-all"
+        >
           Download HTML
+        </button>
+        <button
+          onClick={downloadPDF}
+          className="text-xs px-3 py-1.5 border border-stone-900 bg-stone-900 rounded-lg text-white hover:bg-stone-700 active:scale-95 transition-all"
+        >
+          Download PDF
         </button>
       </div>
     </div>
