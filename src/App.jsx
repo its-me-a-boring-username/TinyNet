@@ -347,36 +347,160 @@ function RecruiterCard({ profile, framework }) {
   const downloadPDF = () => {
     const p = profile
     const fw = framework || 'O*NET'
-    // Generate same HTML then print via iframe → browser saves as PDF
-    const chipStyle = (bg, color) => `display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:${bg};color:${color};margin:2px 3px 2px 0;`
-    const renderRow = (label, years, evidence, bg, color) => `
-      <div style="border-bottom:1px solid #f0f0f0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;">
-          <span style="${chipStyle(bg, color)}">${label}</span>
-          <span style="font-size:11px;color:#999;">${years}y</span>
-        </div>
-        ${evidence ? `<div style="padding:0 16px 10px;font-size:11px;color:#777;font-style:italic;line-height:1.5;">${evidence}</div>` : ''}
+
+    const chip = (label, years, textColor, bgColor, borderColor) => `
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f4f4f4;">
+        <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:600;background:${bgColor};color:${textColor};border:1px solid ${borderColor};">${label}</span>
+        <span style="font-size:10px;color:#b0b0b0;font-weight:500;">${years}y</span>
       </div>`
-    const fnRows = (p.functions || []).map(fn => {
+
+    const evidenceBlock = (text) => text
+      ? `<p style="font-size:10px;color:#888;font-style:italic;line-height:1.6;padding:4px 0 10px;margin:0;">${text}</p>`
+      : ''
+
+    const sectionHead = (label, sub='') => `
+      <p style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#b0b0b0;margin:20px 0 8px;">
+        ${label}${sub ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#d0d0d0;">${sub}</span>` : ''}
+      </p>`
+
+    const fnHtml = (p.functions || []).map(fn => {
       const name = typeof fn === 'string' ? fn : fn.name
       const years = typeof fn === 'object' ? fn.years : 0
-      const evidence = typeof fn === 'object' ? fn.evidence : ''
-      return renderRow(`${getSeniority(years)} ${name}`, years, evidence, '#eef0fb', '#3730a3')
+      const ev = typeof fn === 'object' ? fn.evidence : ''
+      return chip(`${getSeniority(years)} ${name}`, years, '#312e81', '#eef0fb', '#c7d2fe') + evidenceBlock(ev)
     }).join('')
-    const fieldRows = (p.fields || []).map(f => renderRow(f.name, f.years, f.evidence, '#f3f4f6', '#374151')).join('')
-    const indRows = (p.industries || []).map(ind => renderRow(ind.name, ind.years, ind.evidence, '#f0fdf9', '#0f6e56')).join('')
-    const tools = (p.tools || []).map(t => `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:#f5f5f5;color:#666;border:1px solid #e0e0e0;margin:2px 3px 2px 0;">${t}</span>`).join('')
-    const creds = (p.credentials || []).map(c => `<div style="margin-bottom:6px;font-size:12px;"><span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-right:8px;">${c.type}</span><strong>${c.name}</strong>${c.institution ? ` · ${c.institution}` : ''}${c.year ? ` · ${c.year}` : ''}</div>`).join('')
-    const section = (label, body, sub='') => `<div style="border-bottom:1px solid #eee;"><div style="padding:12px 16px 4px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;">${label}${sub ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#ccc;">${sub}</span>` : ''}</span></div>${body}</div>`
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>TinyNet Profile</title><style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',Arial,sans-serif;background:#f7f5f0;display:flex;justify-content:center;padding:40px 16px;}.card{background:white;border-radius:16px;overflow:hidden;max-width:680px;width:100%;box-shadow:0 2px 16px rgba(0,0,0,.08);}@media print{body{background:white;padding:0;}.card{box-shadow:none;border-radius:0;}}</style></head><body><div class="card"><div style="background:#1c1917;padding:24px;"><p style="color:#78716c;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">TinyNet · Taxonomy Profile</p><p style="color:#d6d3d1;font-size:13px;line-height:1.6;">${p.summary||''}</p></div>${section('Function',fnRows)}${section('Knowledge Area / Discipline',fieldRows,`(${fw})`)}${section('Industry',indRows,'(NAICS)')}${p.strengths?`<div style="border-bottom:1px solid #eee;padding:16px;background:#fafaf9;"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px;">Strengths</p><p style="font-size:13px;color:#555;line-height:1.6;">${p.strengths}</p></div>`:''}${tools?`<div style="border-bottom:1px solid #eee;padding:16px;"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px;">Tooling &amp; Methods</p>${tools}</div>`:''}${creds?`<div style="border-bottom:1px solid #eee;padding:16px;"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px;">Education &amp; Credentials</p>${creds}</div>`:''}<div style="padding:12px 16px;display:flex;justify-content:space-between;"><span style="font-size:10px;color:#ccc;">Candidate-owned · read-only for recruiters</span><span style="font-size:10px;color:#ccc;">TinyNet</span></div></div></body></html>`
+
+    const fieldHtml = (p.fields || []).map(f =>
+      chip(f.name, f.years, '#292524', '#f5f5f4', '#e7e5e4') + evidenceBlock(f.evidence)
+    ).join('')
+
+    const indHtml = (p.industries || []).map(ind =>
+      chip(ind.name, ind.years, '#134e4a', '#f0fdf9', '#99f6e4') + evidenceBlock(ind.evidence)
+    ).join('')
+
+    const toolsHtml = (p.tools || []).length
+      ? (p.tools || []).map(t => `<span style="display:inline-block;padding:2px 9px;border-radius:4px;font-size:9.5px;background:#fafafa;color:#666;border:1px solid #e5e5e5;margin:2px 3px 2px 0;">${t}</span>`).join('')
+      : ''
+
+    const credsHtml = (p.credentials || []).map(c =>
+      `<div style="display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid #f4f4f4;">
+        <span style="font-size:8px;font-weight:700;color:#b0b0b0;text-transform:uppercase;letter-spacing:.08em;min-width:70px;">${c.type}</span>
+        <span style="font-size:11px;font-weight:600;color:#1c1917;">${c.name}${c.institution ? `<span style="font-weight:400;color:#888;"> · ${c.institution}</span>` : ''}${c.year ? `<span style="color:#b0b0b0;"> · ${c.year}</span>` : ''}</span>
+      </div>`
+    ).join('')
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TinyNet Profile</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'DM Sans', -apple-system, Arial, sans-serif;
+    background: #f5f3ef;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 24px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    background: white;
+    width: 100%;
+    max-width: 660px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  }
+  .header {
+    background: #1c1917;
+    padding: 28px 32px 24px;
+    position: relative;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1 0%, #14b8a6 50%, #f59e0b 100%);
+  }
+  .body { padding: 0 32px 24px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+  .col {}
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 32px;
+    border-top: 1px solid #f0f0f0;
+    background: #fafafa;
+  }
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; border-radius: 0; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <p style="font-size:8.5px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#78716c;margin-bottom:10px;">TinyNet · Taxonomy Profile</p>
+    <p style="font-size:13px;color:#d6d3d1;line-height:1.65;font-weight:400;">${p.summary || ''}</p>
+  </div>
+
+  <div class="body">
+    <div class="two-col">
+      <div class="col">
+        ${sectionHead('Function')}
+        ${fnHtml}
+
+        ${sectionHead('Knowledge Area / Discipline', `(${fw})`)}
+        ${fieldHtml}
+      </div>
+      <div class="col">
+        ${sectionHead('Industry', '(NAICS)')}
+        ${indHtml}
+
+        ${p.strengths ? `
+        ${sectionHead('Strengths')}
+        <p style="font-size:11px;color:#44403c;line-height:1.7;padding-bottom:8px;">${p.strengths}</p>` : ''}
+
+        ${toolsHtml ? `
+        ${sectionHead('Tooling & Methods')}
+        <div style="padding-bottom:8px;">${toolsHtml}</div>` : ''}
+
+        ${credsHtml ? `
+        ${sectionHead('Education & Credentials')}
+        ${credsHtml}` : ''}
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span style="font-size:9px;color:#c0bdb9;">Candidate-owned · read-only for recruiters</span>
+    <span style="font-size:9px;font-weight:600;color:#c0bdb9;letter-spacing:.06em;">TINYNET</span>
+  </div>
+
+</div>
+</body>
+</html>`
+
     const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;'
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;'
     document.body.appendChild(iframe)
+    iframe.contentDocument.open()
     iframe.contentDocument.write(html)
     iframe.contentDocument.close()
-    iframe.contentWindow.focus()
-    iframe.contentWindow.print()
-    setTimeout(() => document.body.removeChild(iframe), 2000)
+    iframe.contentWindow.onload = () => {
+      iframe.contentWindow.focus()
+      iframe.contentWindow.print()
+      setTimeout(() => document.body.removeChild(iframe), 3000)
+    }
   }
 
   return (
