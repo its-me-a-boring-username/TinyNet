@@ -349,156 +349,186 @@ function RecruiterCard({ profile, framework }) {
   const downloadPDF = () => {
     const p = profile
     const fw = framework || 'O*NET'
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' })
+    const W = 612, H = 792
+    const M = 48  // margin
+    const col1x = M, col2x = W / 2 + 12
+    const colW = W / 2 - M - 12
 
-    const pill = (label, years, textColor, bgColor, borderColor) =>
-      `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;">
-        <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:600;background:${bgColor};color:${textColor};border:1px solid ${borderColor};">${label}</span>
-        <span style="font-size:9.5px;color:#aaa;font-weight:500;">${years}y</span>
-      </div>`
-
-    const bullets = (items) => items.length
-      ? `<ul style="margin:4px 0 8px;padding-left:14px;">${items.map(i => `<li style="font-size:9.5px;color:#666;line-height:1.55;margin-bottom:2px;">${i}</li>`).join('')}</ul>`
-      : ''
-
-    const sectionHead = (label, sub='') =>
-      `<p style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#aaa;margin:16px 0 6px;">${label}${sub ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#ccc;">${sub}</span>` : ''}</p>`
-
-    const fnHtml = (p.functions || []).map(fn => {
-      const name = typeof fn === 'string' ? fn : fn.name
-      const years = typeof fn === 'object' ? fn.years : 0
-      const ev = (typeof fn === 'object' ? fn.evidence : '') || ''
-      const evItems = ev.split(/[·•]/).map(s => s.trim()).filter(Boolean)
-      return pill(`${getSeniority(years)} ${name}`, years, '#312e81', '#eef0fb', '#c7d2fe') + bullets(evItems)
-    }).join('')
-
-    const fieldHtml = (p.fields || []).map(f => {
-      const evItems = (f.evidence || '').split(/[·•]/).map(s => s.trim()).filter(Boolean)
-      return pill(f.name, f.years, '#292524', '#f5f5f4', '#e7e5e4') + bullets(evItems)
-    }).join('')
-
-    const indHtml = (p.industries || []).map(ind => {
-      const evItems = (ind.evidence || '').split(/[·•]/).map(s => s.trim()).filter(Boolean)
-      return pill(ind.name, ind.years, '#134e4a', '#f0fdf9', '#99f6e4') + bullets(evItems)
-    }).join('')
-
-    const toolsHtml = (p.tools || []).map(t =>
-      `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;background:#f5f5f5;color:#666;border:1px solid #e5e5e5;margin:2px 3px 2px 0;">${t}</span>`
-    ).join('')
-
-    const credsHtml = (p.credentials || []).map(c =>
-      `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;">
-        <span style="font-size:7.5px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;min-width:65px;">${c.type}</span>
-        <span style="font-size:10.5px;font-weight:600;color:#1c1917;">${c.name}${c.institution ? `<span style="font-weight:400;color:#888;"> · ${c.institution}</span>` : ''}${c.year ? `<span style="color:#bbb;"> · ${c.year}</span>` : ''}</span>
-      </div>`
-    ).join('')
-
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>TinyNet Profile</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'DM Sans', Arial, sans-serif;
-    background: #f5f3ef;
-    padding: 32px 24px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .page {
-    background: white;
-    max-width: 680px;
-    margin: 0 auto;
-    border-radius: 12px;
-    overflow: hidden;
-    page-break-inside: avoid;
-  }
-  .header {
-    background: #1c1917;
-    padding: 22px 28px 18px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .accent { height: 3px; background: #6366f1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .strengths {
-    padding: 14px 28px;
-    background: #fafaf9;
-    border-bottom: 1px solid #eee;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .body { padding: 4px 28px 20px; }
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
-  .footer {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 28px;
-    border-top: 1px solid #eee;
-    background: #fafafa;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  @media print {
-    body { background: white; padding: 0; }
-    .page { border-radius: 0; max-width: 100%; page-break-inside: avoid; }
-    .header, .strengths, .footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-</style>
-</head>
-<body>
-<div class="page">
-
-  <div class="header">
-    <p style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#78716c;margin-bottom:8px;">TinyNet · Taxonomy Profile</p>
-    <p style="font-size:12.5px;color:#d6d3d1;line-height:1.65;">${p.summary || ''}</p>
-  </div>
-
-  <div class="accent"></div>
-
-  ${p.strengths ? `<div class="strengths">
-    <p style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#aaa;margin-bottom:6px;">Strengths</p>
-    <p style="font-size:11px;color:#44403c;line-height:1.7;font-weight:500;">${p.strengths}</p>
-  </div>` : ''}
-
-  <div class="body">
-    <div class="two-col">
-      <div>
-        ${sectionHead('Function')}
-        ${fnHtml}
-        ${sectionHead('Knowledge area / discipline', `(${fw})`)}
-        ${fieldHtml}
-      </div>
-      <div>
-        ${sectionHead('Industry', '(NAICS)')}
-        ${indHtml}
-        ${toolsHtml ? sectionHead('Tooling & methods') + `<div style="padding-bottom:8px;">${toolsHtml}</div>` : ''}
-        ${credsHtml ? sectionHead('Education & credentials') + credsHtml : ''}
-      </div>
-    </div>
-  </div>
-
-  <div class="footer">
-    <span style="font-size:8.5px;color:#ccc;">Candidate-owned · read-only for recruiters</span>
-    <span style="font-size:8.5px;font-weight:600;color:#ccc;letter-spacing:.06em;">TINYNET</span>
-  </div>
-
-</div>
-</body>
-</html>`
-
-    const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;'
-    document.body.appendChild(iframe)
-    iframe.contentDocument.open()
-    iframe.contentDocument.write(html)
-    iframe.contentDocument.close()
-    iframe.contentWindow.onload = () => {
-      iframe.contentWindow.focus()
-      iframe.contentWindow.print()
-      setTimeout(() => document.body.removeChild(iframe), 3000)
+    // ── Colors ──────────────────────────────────────────────────────────────
+    const C = {
+      dark:    [28,  25,  23 ],
+      stone:   [68,  64,  60 ],
+      muted:   [120, 116, 112],
+      faint:   [168, 162, 156],
+      border:  [228, 224, 220],
+      bg:      [250, 249, 248],
+      indigo:  [79,  70,  229],
+      indigoBg:[238, 240, 251],
+      teal:    [19,  78,  74 ],
+      tealBg:  [240, 253, 249],
+      white:   [255, 255, 255],
     }
+
+    const setC = (arr) => { doc.setTextColor(...arr) }
+    const setFill = (arr) => { doc.setFillColor(...arr) }
+    const setDraw = (arr) => { doc.setDrawColor(...arr) }
+
+    // ── Page background ──────────────────────────────────────────────────────
+    setFill(C.bg); doc.rect(0, 0, W, H, 'F')
+
+    // ── Dark header ──────────────────────────────────────────────────────────
+    setFill(C.dark); doc.rect(0, 0, W, 80, 'F')
+    // Accent bar
+    doc.setFillColor(99, 102, 241); doc.rect(0, 80, W * 0.33, 3, 'F')
+    doc.setFillColor(20, 184, 166); doc.rect(W * 0.33, 80, W * 0.34, 3, 'F')
+    doc.setFillColor(245, 158, 11); doc.rect(W * 0.67, 80, W * 0.33, 3, 'F')
+
+    // Header label
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    setC([120, 113, 108])
+    doc.text('TINYNET · TAXONOMY PROFILE', M, 22)
+
+    // Summary
+    doc.setFontSize(10.5)
+    setC([214, 211, 208])
+    const summaryLines = doc.splitTextToSize(p.summary || '', W - M * 2)
+    doc.text(summaryLines, M, 40)
+
+    let y = 100
+
+    // ── Strengths band ───────────────────────────────────────────────────────
+    if (p.strengths) {
+      setFill([252, 251, 250]); setDraw(C.border)
+      doc.setLineWidth(0.5)
+      doc.rect(M - 8, y - 4, W - M * 2 + 16, 42, 'FD')
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7)
+      setC(C.muted); doc.text('STRENGTHS', M, y + 8)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+      setC(C.stone)
+      const sLines = doc.splitTextToSize(p.strengths, W - M * 2 - 4)
+      doc.text(sLines.slice(0, 2), M, y + 20)
+      y += 54
+    }
+
+    // ── Section label helper ─────────────────────────────────────────────────
+    const sectionLabel = (x, yPos, text, sub = '') => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7)
+      setC(C.muted); doc.text(text.toUpperCase(), x, yPos)
+      if (sub) {
+        doc.setFont('helvetica', 'normal')
+        setC(C.faint)
+        doc.text(sub, x + doc.getTextWidth(text.toUpperCase()) + 4, yPos)
+      }
+      setDraw(C.border); doc.setLineWidth(0.5)
+      doc.line(x, yPos + 3, x + colW, yPos + 3)
+      return yPos + 14
+    }
+
+    // ── Pill + evidence helper ───────────────────────────────────────────────
+    const drawItem = (x, yPos, label, years, evidence, pillFill, pillText, maxW) => {
+      // Pill
+      const pillW = Math.min(doc.getTextWidth(label) + 16, maxW - 30)
+      setFill(pillFill); setDraw([...pillFill.map(v => Math.max(0, v - 30))])
+      doc.setLineWidth(0.5)
+      doc.roundedRect(x, yPos - 8, pillW, 14, 3, 3, 'FD')
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8)
+      setC(pillText); doc.text(label, x + 8, yPos + 1)
+      // Years
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+      setC(C.faint); doc.text(`${years}y`, x + maxW - 2, yPos + 1, { align: 'right' })
+      yPos += 12
+      // Evidence bullets
+      if (evidence) {
+        const items = evidence.split('·').map(s => s.trim()).filter(Boolean)
+        for (const item of items.slice(0, 3)) {
+          if (yPos > H - 60) break
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
+          setC(C.muted)
+          setFill(C.muted); doc.circle(x + 4, yPos - 2, 1, 'F')
+          const evLines = doc.splitTextToSize(item, maxW - 12)
+          doc.text(evLines.slice(0, 2), x + 10, yPos)
+          yPos += evLines.slice(0, 2).length * 9 + 2
+        }
+      }
+      return yPos + 4
+    }
+
+    // ── Left column: Function + Knowledge Areas ──────────────────────────────
+    let leftY = y
+    leftY = sectionLabel(col1x, leftY, 'Function')
+
+    for (const fn of (p.functions || [])) {
+      if (leftY > H - 80) break
+      const name = typeof fn === 'string' ? fn : fn.name
+      const yrs = typeof fn === 'object' ? fn.years : 0
+      const ev = typeof fn === 'object' ? fn.evidence : ''
+      leftY = drawItem(col1x, leftY, `${getSeniority(yrs)} ${name}`, yrs, ev, C.indigoBg, C.indigo, colW)
+    }
+
+    leftY += 6
+    leftY = sectionLabel(col1x, leftY, 'Knowledge area / discipline', fw)
+
+    for (const f of (p.fields || [])) {
+      if (leftY > H - 80) break
+      leftY = drawItem(col1x, leftY, f.name, f.years, f.evidence, [245, 245, 244], C.stone, colW)
+    }
+
+    // ── Right column: Industry + Strengths + Tools + Credentials ────────────
+    let rightY = y
+    rightY = sectionLabel(col2x, rightY, 'Industry', '(NAICS)')
+
+    for (const ind of (p.industries || [])) {
+      if (rightY > H - 80) break
+      rightY = drawItem(col2x, rightY, ind.name, ind.years, ind.evidence, C.tealBg, C.teal, colW)
+    }
+
+    rightY += 6
+
+    // Tools
+    if ((p.tools || []).length > 0) {
+      rightY = sectionLabel(col2x, rightY, 'Tooling & methods')
+      let tx = col2x
+      for (const t of p.tools) {
+        const tw = doc.getTextWidth(t) + 12
+        if (tx + tw > col2x + colW) { tx = col2x; rightY += 14 }
+        setFill([250, 250, 249]); setDraw(C.border); doc.setLineWidth(0.5)
+        doc.roundedRect(tx, rightY - 8, tw, 12, 2, 2, 'FD')
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
+        setC(C.stone); doc.text(t, tx + 6, rightY)
+        tx += tw + 4
+      }
+      rightY += 18
+    }
+
+    // Credentials
+    if ((p.credentials || []).length > 0) {
+      rightY += 4
+      rightY = sectionLabel(col2x, rightY, 'Education & credentials')
+      for (const c of p.credentials) {
+        if (rightY > H - 60) break
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7)
+        setC(C.faint); doc.text((c.type || '').toUpperCase(), col2x, rightY)
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5)
+        setC(C.dark)
+        const credText = [c.name, c.institution, c.year].filter(Boolean).join(' · ')
+        const credLines = doc.splitTextToSize(credText, colW - 4)
+        doc.text(credLines, col2x, rightY + 10)
+        rightY += credLines.length * 11 + 14
+      }
+    }
+
+    // ── Footer ───────────────────────────────────────────────────────────────
+    setDraw(C.border); doc.setLineWidth(0.5)
+    doc.line(M, H - 32, W - M, H - 32)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
+    setC(C.faint)
+    doc.text('Candidate-owned · read-only for recruiters', M, H - 20)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5)
+    doc.text('TINYNET', W - M, H - 20, { align: 'right' })
+
+    doc.save('TinyNet_Profile.pdf')
   }
   return (
     <div>
