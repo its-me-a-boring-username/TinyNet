@@ -400,16 +400,18 @@ function RecruiterCard({ profile, framework }) {
 
     // ── Strengths band ───────────────────────────────────────────────────────
     if (p.strengths) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+      const sLines = doc.splitTextToSize(p.strengths, W - M * 2 - 4)
+      const boxH = sLines.length * 11 + 22
       setFill([252, 251, 250]); setDraw(C.border)
       doc.setLineWidth(0.5)
-      doc.rect(M - 8, y - 4, W - M * 2 + 16, 42, 'FD')
+      doc.rect(M - 8, y - 4, W - M * 2 + 16, boxH, 'FD')
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7)
       setC(C.muted); doc.text('STRENGTHS', M, y + 8)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
       setC(C.stone)
-      const sLines = doc.splitTextToSize(p.strengths, W - M * 2 - 4)
-      doc.text(sLines.slice(0, 2), M, y + 20)
-      y += 54
+      doc.text(sLines, M, y + 20)
+      y += boxH + 12
     }
 
     // ── Section label helper ─────────────────────────────────────────────────
@@ -429,12 +431,12 @@ function RecruiterCard({ profile, framework }) {
     // ── Pill + evidence helper ───────────────────────────────────────────────
     const drawItem = (x, yPos, label, years, evidence, pillFill, pillText, maxW) => {
       // Pill
-      const pillW = Math.min(doc.getTextWidth(label) + 16, maxW - 30)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8)
+      const pillW = Math.min(doc.getTextWidth(label) + 16, maxW - 28)
       setFill(pillFill); setDraw([...pillFill.map(v => Math.max(0, v - 30))])
       doc.setLineWidth(0.5)
       doc.roundedRect(x, yPos - 8, pillW, 14, 3, 3, 'FD')
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8)
-      setC(pillText); doc.text(label, x + 8, yPos + 1)
+      setC(pillText); doc.text(label, x + 8, yPos + 1, { maxWidth: pillW - 12 })
       // Years
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
       setC(C.faint); doc.text(`${years}y`, x + maxW - 2, yPos + 1, { align: 'right' })
@@ -442,14 +444,14 @@ function RecruiterCard({ profile, framework }) {
       // Evidence bullets
       if (evidence) {
         const items = evidence.split('·').map(s => s.trim()).filter(Boolean)
-        for (const item of items.slice(0, 3)) {
+        for (const item of items.slice(0, 4)) {
           if (yPos > H - 60) break
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
           setC(C.muted)
           setFill(C.muted); doc.circle(x + 4, yPos - 2, 1, 'F')
           const evLines = doc.splitTextToSize(item, maxW - 12)
-          doc.text(evLines.slice(0, 2), x + 10, yPos)
-          yPos += evLines.slice(0, 2).length * 9 + 2
+          doc.text(evLines, x + 10, yPos)
+          yPos += evLines.length * 9 + 2
         }
       }
       return yPos + 4
