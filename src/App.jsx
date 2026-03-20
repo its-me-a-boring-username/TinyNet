@@ -499,7 +499,7 @@ function RecruiterCard({ profile, framework }) {
       iframe.contentWindow.print()
       setTimeout(() => document.body.removeChild(iframe), 3000)
     }
-  }eEffect } from 'react'
+  }
 
 
 
